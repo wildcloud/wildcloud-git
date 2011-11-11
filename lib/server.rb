@@ -61,7 +61,7 @@ class Core
     data = ""
     @keys.each do |username, keys|
       keys.each do |key|
-        data << "command=\"#{RUBY} #{File.expand_path("../client.rb", __FILE__)} #{username}\" #{key}\n"
+        data << "command=\"#{CONFIG["paths"]["ruby"]} #{File.expand_path("../client.rb", __FILE__)} #{username}\" #{key}\n"
       end
     end
     File.open("./.ssh/authorized_keys", "w") do |file|
