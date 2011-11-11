@@ -1,0 +1,21 @@
+GEM
+  remote: http://rubygems.org/
+  specs:
+    amq-client (0.8.6)
+      amq-protocol (>= 0.8.4)
+      eventmachine
+    amq-protocol (0.8.4)
+    amqp (0.8.3)
+      amq-client (~> 0.8.6)
+      amq-protocol (~> 0.8.4)
+      eventmachine
+    eventmachine (0.12.10)
+    yajl-ruby (1.1.0)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  amqp
+  eventmachine
+  yajl-ruby
