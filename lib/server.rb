@@ -23,9 +23,14 @@ CONFIG = YAML.load_file('/wc/config/git.yml')
 
 module GitServer
 
-  def receive_data(data)
-    username, repository, action = data.split("|", 3)
-    send_data(Core.authorize(username, repository, action))
+  include EventMachine::Protocols::LineText2
+
+  def receive_line(data)
+    type, username, repository, action = data.split("|", 4)
+    case type
+      when 'auth'
+        send_data(Core.authorize(username, repository, action))
+    end
     close_connection_after_writing
   end
 
@@ -63,7 +68,7 @@ class Core
           self.sync_keys
         end
       when 'repository.create'
-        `git init --bare #{File.join(CONFIG["paths"]["repositories"], message["repository"])}`
+        `git init --bare #{File.join(CONFIG["paths"]["repositories"], message["repository"])} --template #{CONFIG["paths"]["repository.template"]}`
      when 'repository.authorize'
         (@access[username] ||= []) << message["repository"]
       when 'repository.unauthorize'

@@ -38,7 +38,7 @@ USER = ARGV[0]
 
 # Authorize
 socket = UNIXSocket.new(CONFIG["paths"]["socket"])
-socket.write("#{USER}|#{REPO}|#{ACTION}")
+socket.write("auth|#{USER}|#{REPO}|#{ACTION}\n")
 unless socket.getc.to_s == "1"
   message(:error, 'Invalid authorization.')
 end

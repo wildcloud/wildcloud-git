@@ -3,6 +3,7 @@ node:
 
 paths:
   repositories: ./repositories
+  repository.template: ./template
   ruby: ./ruby
   socket: ./git.socket
 
