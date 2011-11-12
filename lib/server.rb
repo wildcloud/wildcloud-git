@@ -31,7 +31,7 @@ class Core
   end
 
   def self.handle(metadata, message)
-    username = metadata.headers["username"]
+    username = metadata.headers["username"] if metadata.headers
     message = Yajl::Parser.parse(message)
     case metadata.type
       when 'sync'
@@ -79,8 +79,8 @@ end
 EventMachine.run do
   CONNECTION = AMQP.connect(CONFIG["amqp"])
   CHANNEL = AMQP::Channel.new(CONNECTION)
-  TOPIC = CHANNEL.topic('wildcloud.git', :auto_delete => true)
-  QUEUE = CHANNEL.queue("wildcloud.git.#{CONFIG["node"]["name"]}", :auto_delete => true).bind(TOPIC, :routing_key => "nodes").bind(TOPIC, :routing_key => "node.#{CONFIG["node"]["name"]}")
+  TOPIC = CHANNEL.topic('wildcloud.git')
+  QUEUE = CHANNEL.queue("wildcloud.git.#{CONFIG["node"]["name"]}").bind(TOPIC, :routing_key => "nodes").bind(TOPIC, :routing_key => "node.#{CONFIG["node"]["name"]}")
   TOPIC.publish(CONFIG["node"]["name"], :routing_key => "manager", :type => "sync")
   QUEUE.subscribe do |metadata, message|
     Core.handle(metadata, message)

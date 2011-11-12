@@ -21,11 +21,11 @@ ACTION = cmd[1]
 REPO = cmd[2]
 USER = ARGV[0]
 
-# Authenticate
+# Authorize
 socket = UNIXSocket.new(CONFIG["paths"]["socket"])
 socket.write("#{USER}|#{REPO}|#{ACTION}")
 unless socket.getc.to_s == "1"
-  message(:error, 'Invalid authentication.')
+  message(:error, 'Invalid authorization.')
 end
 
 # Pass to Git
