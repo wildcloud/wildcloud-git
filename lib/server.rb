@@ -26,12 +26,17 @@ module GitServer
   include EventMachine::Protocols::LineText2
 
   def receive_line(data)
-    type, username, repository, action = data.split("|", 4)
+    type, data = data.split("|", 2)
     case type
       when 'auth'
+        username, repository, action = data.split("|", 3)
         send_data(Core.authorize(username, repository, action))
+        close_connection_after_writing
+      when 'push'
+        user, commit, ref, repository = data.split("|", 4)
+        message = { :user => user, :commit => commit, :ref => ref, :repository => repository }
+        TOPIC.publish(Yajl::Encoder.encode(message), :routing_key => "manager", :type => "push")
     end
-    close_connection_after_writing
   end
 
 end
@@ -68,7 +73,7 @@ class Core
           self.sync_keys
         end
       when 'repository.create'
-        `git init --bare #{File.join(CONFIG["paths"]["repositories"], message["repository"])} --template #{CONFIG["paths"]["repository.template"]}`
+        `git init --bare #{File.join(CONFIG["paths"]["repositories"], message["repository"])} --template #{File.expand_path("../../template", __FILE__)}`
      when 'repository.authorize'
         (@access[username] ||= []) << message["repository"]
       when 'repository.unauthorize'
