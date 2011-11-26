@@ -18,8 +18,7 @@ require 'bundler/setup'
 require 'amqp'
 require 'yajl'
 require 'yaml'
-
-CONFIG = YAML.load_file('/wc/config/git.yml')
+require 'logger'
 
 module GitServer
 
@@ -43,6 +42,14 @@ end
 
 class Core
 
+  def self.configuration
+    @configuration ||= YAML.load_file('/wc/config/git.yml')
+  end
+
+  def self.logger
+    @logger ||= Logger.new($stdout)
+  end
+
   def self.setup
     @access = {}
     @keys = {}
@@ -56,6 +63,7 @@ class Core
   end
 
   def self.handle(metadata, message)
+    Core.logger.debug("(Core) Got message: #{message}")
     username = metadata.headers["username"] if metadata.headers
     message = Yajl::Parser.parse(message)
     case metadata.type
@@ -73,8 +81,10 @@ class Core
           self.sync_keys
         end
       when 'repository.create'
-        `git init --bare #{File.join(CONFIG["paths"]["repositories"], message["repository"])} --template #{File.expand_path("../../template", __FILE__)}`
-     when 'repository.authorize'
+        `git init --bare #{File.join(Core.configuration["paths"]["repositories"], message["repository"])} --template #{File.expand_path("../../template", __FILE__)}`
+      when 'repository.destroy'
+        `rm -rf #{File.join(Core.configuration["paths"]["repositories"], message["repository"])}`
+      when 'repository.authorize'
         (@access[username] ||= []) << message["repository"]
       when 'repository.unauthorize'
         repos = @access[username]
@@ -83,32 +93,38 @@ class Core
   end
 
   def self.sync_keys
+    Core.logger.info("(Core) Synchronizing data")
     data = ""
     @keys.each do |username, keys|
       keys.each do |key|
-        data << "command=\"#{CONFIG["paths"]["ruby"]} #{File.expand_path("../client.rb", __FILE__)} #{username}\" #{key}\n"
+        data << "command=\"#{Core.configuration["paths"]["ruby"]} #{File.expand_path("../client.rb", __FILE__)} #{username}\" #{key}\n"
       end
     end
     File.open("./.ssh/authorized_keys", "w") do |file|
       file.write(data)
     end
+    Core.logger.info("(Core) Data synchronized")
   end
 
   def self.start
-    EventMachine.start_server(CONFIG["paths"]["socket"], GitServer)
+    EventMachine.start_server(Core.configuration["paths"]["socket"], GitServer)
     @started = true
+    Core.logger.info("(Core) Git server started")
   end
 
 end
 
 EventMachine.run do
-  CONNECTION = AMQP.connect(CONFIG["amqp"])
+  Core.logger.info("(AMQP) Connecting to broker")
+  CONNECTION = AMQP.connect(Core.configuration["amqp"])
   CHANNEL = AMQP::Channel.new(CONNECTION)
   TOPIC = CHANNEL.topic('wildcloud.git')
-  QUEUE = CHANNEL.queue("wildcloud.git.#{CONFIG["node"]["name"]}").bind(TOPIC, :routing_key => "nodes").bind(TOPIC, :routing_key => "node.#{CONFIG["node"]["name"]}")
-  TOPIC.publish(CONFIG["node"]["name"], :routing_key => "manager", :type => "sync")
+  QUEUE = CHANNEL.queue("wildcloud.git.#{Core.configuration["node"]["name"]}").bind(TOPIC, :routing_key => "nodes").bind(TOPIC, :routing_key => "node.#{Core.configuration["node"]["name"]}")
+  Core.logger.info("(Core) Requesting sync")
+  TOPIC.publish(Core.configuration["node"]["name"], :routing_key => "manager", :type => "sync")
   QUEUE.subscribe do |metadata, message|
     Core.handle(metadata, message)
   end
+  Core.logger.info("(Core) Starting git server")
   Core.start
 end
