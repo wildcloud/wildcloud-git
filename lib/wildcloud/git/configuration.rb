@@ -1,6 +1,3 @@
-#!/home/git/ruby
-# TODO: relativize Ruby path
-
 # Copyright (C) 2011 Marek Jelen
 #
 # This program is free software: you can redistribute it and/or modify
@@ -16,22 +13,16 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-# Libraries
-require "socket"
 require 'yaml'
 
-# Constants
-CONFIG = YAML.load_file('/wc/config/git.yml')
-REPOS = CONFIG["paths"]["repositories"]
-USER = ENV["GIT_USERNAME"]
-SOCKET = UNIXSocket.new(CONFIG["paths"]["socket"])
-
-# One line per ref
-$stdin.each_line do |line|
-  from, to, ref = line.split(" ")
-  ref.sub!("refs/heads/", "")
-  repo = File.expand_path(".").sub(REPOS, "")
-  socket.write("push|#{USER}|#{to}|#{ref}|#{repo}\n")
+module Wildcloud
+  module Git
+    def self.configuration
+      file = '/etc/wildcloud/git.yml'
+      unless File.exists?(file)
+        file = './git.yml'
+      end
+      @configuration ||= YAML.load_file(file)
+    end
+  end
 end
-
-socket.close
