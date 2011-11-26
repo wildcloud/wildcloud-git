@@ -121,6 +121,10 @@ module Wildcloud
         Core.logger.info("(Core) Data synchronized (#{us} users, #{ks} keys)")
       end
 
+      def publish(message)
+        @topic.publish(Yajl::Encoder.encode(message), :routing_key => 'master')
+      end
+
     end
   end
 end
