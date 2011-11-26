@@ -68,7 +68,8 @@ module Wildcloud
 end
 
 if $0 == __FILE__
-  require File.expand_path('../configuration', __FILE__)
+  $: << File.expand_path('../../..', __FILE__)
+  require 'wildcloud/git/configuration'
   git = Wildcloud::Git::Client.new
   git.check_command
   git.parse_information

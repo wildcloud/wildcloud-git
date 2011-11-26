@@ -1,4 +1,3 @@
-#!/usr/bin/env ruby
 # Copyright (C) 2011 Marek Jelen
 #
 # This program is free software: you can redistribute it and/or modify
@@ -22,11 +21,12 @@ require 'yaml'
 module Wildcloud
   module Git
     def self.configuration
+      return @configuration if @configuration
       file = '/etc/wildcloud/git.yml'
       unless File.exists?(file)
         file = './git.yml'
       end
-      @configuration ||= YAML.load_file(file)
+      @configuration = YAML.load_file(file)
     end
   end
 end
