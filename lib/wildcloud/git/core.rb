@@ -33,7 +33,7 @@ module Wildcloud
         # Connect to AMQP
         Git.logger.info("(Core) Connecting to broker")
         @amqp = AMQP.connect(Git.configuration["amqp"])
-        @channel = AMQP::Channel.new(@channel)
+        @channel = AMQP::Channel.new(@amqp)
 
         # Communication infrastructure
         @topic = @channel.topic('wildcloud.git')

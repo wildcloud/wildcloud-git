@@ -15,14 +15,18 @@
 
 require 'yaml'
 
+require 'wildcloud/git/logger'
+
 module Wildcloud
   module Git
     def self.configuration
+      return @configuration if @configuration
       file = '/etc/wildcloud/git.yml'
       unless File.exists?(file)
         file = './git.yml'
       end
-      @configuration ||= YAML.load_file(file)
+      Git.logger.info("(Configuration) Loading from file #{file}")
+      @configuration = YAML.load_file(file)
     end
   end
 end
