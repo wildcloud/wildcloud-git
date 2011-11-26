@@ -43,7 +43,7 @@ module Wildcloud
 
         # Request synchronization
         Git.logger.info("(Core) Requesting synchronization")
-        @topic.publish(Yajl::Encoder.encode({ :node => Git.configuration["node"]["name"], :type => :sync }), :routing_key => "manager")
+        publish({ :node => Git.configuration["node"]["name"], :type => :sync })
 
         # Listen for task
         @queue.subscribe do |metadata, message|
@@ -95,7 +95,7 @@ module Wildcloud
       end
 
       def handle_authorize_repository(data)
-        (@access[data['username']] ||= []) << data['epository']
+        (@access[data['username']] ||= []) << data['repository']
       end
 
       def handle_unauthorize_repository(data)
@@ -111,7 +111,7 @@ module Wildcloud
         @keys.each do |username, keys|
           us += 1
           keys.each do |key|
-            data << "command=\"#{Core.configuration["paths"]["ruby"]} #{client} #{username}\" #{key}\n"
+            data << "command=\"#{Git.configuration["paths"]["ruby"]} #{client} #{username}\" #{key}\n"
             ks += 1
           end
         end
