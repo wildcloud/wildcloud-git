@@ -2,10 +2,9 @@ node:
   name: master
 
 paths:
-  repositories: ./repositories
-  repository.template: ./template
-  ruby: ./ruby
-  socket: ./git.socket
+  repositories: /home/git/repositories/
+  ruby: /home/git/ruby
+  socket: /home/git/git.socket
 
 amqp:
   :host: 127.0.0.1
@@ -13,4 +12,3 @@ amqp:
   :user: guest
   :pass: guest
   :vhost: /
-

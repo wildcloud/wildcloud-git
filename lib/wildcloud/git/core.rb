@@ -87,7 +87,15 @@ module Wildcloud
       end
 
       def handle_create_repository(data)
-        `git init --bare #{File.join(Git.configuration['paths']['repositories'], data['repository'])} --template #{File.expand_path('../../template', __FILE__)}`
+        path = File.join(Git.configuration['paths']['repositories'], data['repository'])
+        `git init --bare #{path} --template #{File.expand_path('../../template', __FILE__)}`
+        pre_receive = File.read(File.expand_path("../pre-receive.rb", __FILE__))
+        pre_receive = "#!#{Git.configuration['paths']['ruby']}\n#{pre_receive}"
+        hook_path = File.join(path, 'hooks', 'pre-receive')
+        File.open(hook_path, 'w') do |file|
+          file.write(pre_receive)
+        end
+        File.chmod(0700, hook_path)
       end
 
       def handle_destroy_repository(data)
@@ -118,10 +126,11 @@ module Wildcloud
         File.open("./.ssh/authorized_keys", "w") do |file|
           file.write(data)
         end
-        Core.logger.info("(Core) Data synchronized (#{us} users, #{ks} keys)")
+        Git.logger.info("(Core) Data synchronized (#{us} users, #{ks} keys)")
       end
 
       def publish(message)
+        Git.logger.debug("(Core) Publishing #{message.inspect}")
         @topic.publish(Yajl::Encoder.encode(message), :routing_key => 'master')
       end
 
