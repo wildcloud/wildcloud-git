@@ -52,6 +52,7 @@ module Wildcloud
       end
 
       def authorize(username, repository, action)
+        return 1 if username == 'wildcloud.platform.master.key'
         return 0 unless @access[username] && @access[username].include?(repository)
         return 1
       end
@@ -86,6 +87,17 @@ module Wildcloud
         end
       end
 
+      def handle_add_platform_key(data)
+        @platform_keys ||= []
+        @platform_keys << data['key'] unless @platform_keys.include?(data['key'])
+        sync_keys
+      end
+
+      def handle_remove_platform_key(data)
+        (@platform_keys ||= []).delete(data['key'])
+        sync_keys
+      end
+
       def handle_create_repository(data)
         path = File.join(Git.configuration['paths']['repositories'], data['repository'])
         `git init --bare #{path} --template #{File.expand_path('../../template', __FILE__)}`
@@ -116,13 +128,16 @@ module Wildcloud
         data = ""
         client = File.expand_path("../client.rb", __FILE__)
         ks = us = 0
+        @platform_keys.each do |key|
+          data << "command=\"#{Git.configuration["paths"]["ruby"]} #{client} 'wildcloud.platform.master.key'\" #{key}\n"
+        end if @platform_keys
         @keys.each do |username, keys|
           us += 1
           keys.each do |key|
             data << "command=\"#{Git.configuration["paths"]["ruby"]} #{client} #{username}\" #{key}\n"
             ks += 1
           end
-        end
+        end if @keys
         File.open("./.ssh/authorized_keys", "w") do |file|
           file.write(data)
         end
