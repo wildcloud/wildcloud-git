@@ -1,18 +1,16 @@
-#!/usr/bin/env ruby
-# Copyright (C) 2011 Marek Jelen
+# Copyright 2011 Marek Jelen
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
+#    http://www.apache.org/licenses/LICENSE-2.0
 #
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 require 'socket'
 
@@ -31,25 +29,28 @@ module Wildcloud
 
       # Was the right command issued?
       def check_command
-        @command = /^git-(upload|receive)-pack '([^']*)'$/.match(ENV["SSH_ORIGINAL_COMMAND"])
+        @command = /^git-(upload|receive)-pack '([^']*)'$/.match(ENV['SSH_ORIGINAL_COMMAND'])
         message(:error, 'Invalid command.') unless @command
       end
 
       def parse_information
-        @repositories = Git.configuration["paths"]["repositories"]
+        message(:info, 'Parsing request')
+        @repositories = Git.configuration['paths']['repositories']
         @action = @command[1]
         @repository = @command[2]
         @user = ARGV[0]
       end
 
       def setup_environment
-        ENV["GIT_USERNAME"] = @user
+        message(:info, 'Setting up environment')
+        ENV['GIT_USERNAME'] = @user
       end
 
       def authorize
-        socket = UNIXSocket.new(Git.configuration["paths"]["socket"])
+        message(:info, 'Checking authorization')
+        socket = UNIXSocket.new(Git.configuration['paths']['socket'])
         socket.write("auth|#{@user}|#{@repository}|#{@action}\n")
-        unless socket.getc.to_s == "1"
+        unless socket.getc.to_s == '1'
           message(:error, 'Invalid authorization.')
         end
         socket.close
@@ -65,15 +66,4 @@ module Wildcloud
 
     end
   end
-end
-
-if $0 == __FILE__
-  $: << File.expand_path('../../..', __FILE__)
-  require 'wildcloud/git/configuration'
-  git = Wildcloud::Git::Client.new
-  git.check_command
-  git.parse_information
-  git.setup_environment
-  git.authorize
-  git.run_git
 end

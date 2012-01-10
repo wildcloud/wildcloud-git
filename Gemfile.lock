@@ -10,7 +10,9 @@ GEM
       amq-protocol (~> 0.8.4)
       eventmachine
     eventmachine (0.12.10)
-    yajl-ruby (1.1.0)
+    json (1.6.4)
+    wildcloud-configuration (0.0.1)
+    wildcloud-logger (0.0.2)
 
 PLATFORMS
   ruby
@@ -18,4 +20,6 @@ PLATFORMS
 DEPENDENCIES
   amqp
   eventmachine
-  yajl-ruby
+  json
+  wildcloud-configuration
+  wildcloud-logger

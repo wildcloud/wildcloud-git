@@ -2,4 +2,7 @@ source :rubygems
 
 gem 'eventmachine'
 gem 'amqp'
-gem 'yajl-ruby'
+gem 'json'
+
+gem 'wildcloud-logger'
+gem 'wildcloud-configuration'

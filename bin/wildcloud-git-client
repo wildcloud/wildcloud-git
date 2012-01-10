@@ -1,3 +1,5 @@
+#!/usr/bin/env ruby
+#
 # Copyright 2011 Marek Jelen
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,25 +14,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-require 'amqp'
-require 'json'
+require 'rubygems'
 
-require 'wildcloud/git/configuration'
-require 'wildcloud/git/logger'
-require 'wildcloud/git/core'
-require 'wildcloud/git/protocol'
+require 'wildcloud/configuration'
+
+require File.expand_path('../../lib/wildcloud/git/client', __FILE__)
 
 module Wildcloud
   module Git
-    class Server
 
-      def self.start
-        Git.logger.info('Server', 'Starting')
-        @core = Wildcloud::Git::Core.new
-        EventMachine.start_server(Git.configuration['paths']['socket'], Wildcloud::Git::Protocol, @core)
-        Git.logger.info('Server', 'Started')
-      end
-
+    def self.configuration
+      return @configuration if @configuration
+      @configuration = Wildcloud::Configuration.load('git').configuration
     end
+
   end
 end
+
+git = Wildcloud::Git::Client.new
+git.check_command
+git.parse_information
+git.setup_environment
+git.authorize
+git.run_git

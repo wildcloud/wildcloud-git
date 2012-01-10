@@ -1,0 +1,4 @@
+paths:
+  repositories: /home/git/repositories/
+  ruby: /home/git/ruby
+  socket: /home/git/git.socket

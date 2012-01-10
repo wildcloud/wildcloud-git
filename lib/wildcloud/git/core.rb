@@ -1,49 +1,49 @@
-# Copyright (C) 2011 Marek Jelen
+# Copyright 2011 Marek Jelen
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Affero General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Affero General Public License for more details.
+#    http://www.apache.org/licenses/LICENSE-2.0
 #
-# You should have received a copy of the GNU Affero General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
 require 'wildcloud/git/configuration'
 require 'wildcloud/git/logger'
 
-require 'yajl'
 require 'amqp'
+require 'json'
 
 module Wildcloud
   module Git
     class Core
 
       def initialize
-        Git.logger.info("(Core) Starting")
+        Git.logger.info('Core', 'Starting')
 
         # Define basic variables
         @access = {}
         @keys = {}
 
         # Connect to AMQP
-        Git.logger.info("(Core) Connecting to broker")
-        @amqp = AMQP.connect(Git.configuration["amqp"])
-        @channel = AMQP::Channel.new(@amqp)
+        Git.logger.info('Core', 'Connecting to broker')
+        @amqp = AMQP.connect(Git.configuration['amqp'])
+        Git.logger_add_amqp(@amqp)
 
         # Communication infrastructure
+        @channel = AMQP::Channel.new(@amqp)
         @topic = @channel.topic('wildcloud.git')
-        @queue = @channel.queue("wildcloud.git.#{Git.configuration["node"]["name"]}")
-        @queue.bind(@topic, :routing_key => "nodes")
-        @queue.bind(@topic, :routing_key => "node.#{Git.configuration["node"]["name"]}")
+        @queue = @channel.queue("wildcloud.git.#{Git.configuration['node']['name']}")
+        @queue.bind(@topic, :routing_key => 'nodes')
+        @queue.bind(@topic, :routing_key => "node.#{Git.configuration['node']['name']}")
 
         # Request synchronization
-        Git.logger.info("(Core) Requesting synchronization")
-        publish({ :node => Git.configuration["node"]["name"], :type => :sync })
+        Git.logger.info('Core', 'Requesting synchronization')
+        publish({ :node => Git.configuration['node']['name'], :type => :sync })
 
         # Listen for task
         @queue.subscribe do |metadata, message|
@@ -54,13 +54,13 @@ module Wildcloud
       def authorize(username, repository, action)
         return 1 if username == 'wildcloud.platform.master.key'
         return 0 unless @access[username] && @access[username].include?(repository)
-        return 1
+        1
       end
 
       def handle(metadata, message)
-        Git.logger.debug("(Core) Got message: #{message}")
-        message = Yajl::Parser.parse(message)
-        method = "handle_#{message["type"]}".to_sym
+        Git.logger.debug('Core', "Got message: #{message}")
+        message = JSON.parse(message)
+        method = "handle_#{message['type']}".to_sym
         if respond_to?(method)
           send(method, message)
         else
@@ -101,7 +101,7 @@ module Wildcloud
       def handle_create_repository(data)
         path = File.join(Git.configuration['paths']['repositories'], data['repository'])
         `git init --bare #{path} --template #{File.expand_path('../../template', __FILE__)}`
-        pre_receive = File.read(File.expand_path("../pre-receive.rb", __FILE__))
+        pre_receive = File.read(File.expand_path('../pre-receive.rb', __FILE__))
         pre_receive = "#!#{Git.configuration['paths']['ruby']}\n#{pre_receive}"
         hook_path = File.join(path, 'hooks', 'pre-receive')
         File.open(hook_path, 'w') do |file|
@@ -124,29 +124,29 @@ module Wildcloud
       end
 
       def sync_keys
-        Git.logger.info("(Core) Synchronizing keys")
+        Git.logger.info('Core', 'Synchronizing keys')
         data = ""
-        client = File.expand_path("../client.rb", __FILE__)
+        client = File.expand_path('../client.rb', __FILE__)
         ks = us = 0
         @platform_keys.each do |key|
-          data << "command=\"#{Git.configuration["paths"]["ruby"]} #{client} 'wildcloud.platform.master.key'\" #{key}\n"
+          data << "command=\"source /etc/profile && wildcloud-git-client 'wildcloud.platform.master.key'\" #{key}\n"
         end if @platform_keys
         @keys.each do |username, keys|
           us += 1
           keys.each do |key|
-            data << "command=\"#{Git.configuration["paths"]["ruby"]} #{client} #{username}\" #{key}\n"
+            data << "command=\"source /etc/profile && wildcloud-git-client #{username}\" #{key}\n"
             ks += 1
           end
         end if @keys
-        File.open("./.ssh/authorized_keys", "w") do |file|
+        File.open('./.ssh/authorized_keys', 'w') do |file|
           file.write(data)
         end
-        Git.logger.info("(Core) Data synchronized (#{us} users, #{ks} keys)")
+        Git.logger.info('Core', "Data synchronized (#{us} users, #{ks} keys)")
       end
 
       def publish(message)
-        Git.logger.debug("(Core) Publishing #{message.inspect}")
-        @topic.publish(Yajl::Encoder.encode(message), :routing_key => 'master')
+        Git.logger.debug('Core', "Publishing #{message.inspect}")
+        @topic.publish(JSON.dump(message), :routing_key => 'master')
       end
 
     end
